@@ -1,0 +1,31 @@
+{
+  "name": "bitrix24-mcp-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Bitrix24 MCP Server for AI Agent Integration",
+  "main": "build/index.js",
+  "bin": {
+    "bitrix24-mcp": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:unix": "tsc && chmod +x build/index.js",
+    "dev": "tsc --watch",
+    "start": "node build/index.js",
+    "test": "node test/integration.test.js"
+  },
+  "files": ["build"],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "zod": "^3.22.4",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/node-fetch": "^2.6.9",
+    "typescript": "^5.3.0"
+  },
+  "keywords": ["mcp", "bitrix24", "crm", "ai", "automation"],
+  "author": "Your Name",
+  "license": "MIT"
+}
