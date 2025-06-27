@@ -30,6 +30,8 @@ export interface BitrixContact {
   COMPANY_TITLE?: string;
   POST?: string;
   COMMENTS?: string;
+  DATE_CREATE?: string;
+  DATE_MODIFY?: string;
 }
 
 export interface BitrixDeal {
@@ -43,6 +45,30 @@ export interface BitrixDeal {
   BEGINDATE?: string;
   CLOSEDATE?: string;
   COMMENTS?: string;
+}
+
+export interface BitrixLead {
+  ID?: string;
+  TITLE?: string;
+  NAME?: string;
+  LAST_NAME?: string;
+  SECOND_NAME?: string;
+  COMPANY_TITLE?: string;
+  SOURCE_ID?: string;
+  STATUS_ID?: string;
+  STATUS_SEMANTIC_ID?: string;
+  OPPORTUNITY?: string;
+  CURRENCY_ID?: string;
+  PHONE?: Array<{ VALUE: string; VALUE_TYPE: string }>;
+  EMAIL?: Array<{ VALUE: string; VALUE_TYPE: string }>;
+  ASSIGNED_BY_ID?: string;
+  CREATED_BY_ID?: string;
+  MODIFY_BY_ID?: string;
+  DATE_CREATE?: string;
+  DATE_MODIFY?: string;
+  DATE_CLOSED?: string;
+  COMMENTS?: string;
+  OPENED?: string;
 }
 
 export interface BitrixTask {
@@ -180,6 +206,42 @@ export class Bitrix24Client {
     return await this.makeRequest('crm.contact.list', params);
   }
 
+  // Helper method to get latest contacts with proper ordering
+  async getLatestContacts(limit: number = 20): Promise<BitrixContact[]> {
+    // Get ALL contacts using pagination to ensure we find the most recent ones
+    let allContacts: BitrixContact[] = [];
+    let start = 0;
+    let hasMore = true;
+    const batchSize = 50;
+    
+    while (hasMore) {
+      const batch = await this.makeRequest('crm.contact.list', {
+        start: start
+      });
+      
+      if (batch.length === 0) {
+        hasMore = false;
+      } else {
+        allContacts = allContacts.concat(batch);
+        start += batchSize;
+        
+        // Safety check to avoid infinite loop (max 2000 contacts)
+        if (start > 2000) {
+          break;
+        }
+      }
+    }
+    
+    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
+    const sortedContacts = allContacts.sort((a: BitrixContact, b: BitrixContact) => {
+      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedContacts.slice(0, limit);
+  }
+
   // CRM Deal Methods
   async createDeal(deal: BitrixDeal): Promise<string> {
     const result = await this.makeRequest('crm.deal.add', { fields: deal });
@@ -195,8 +257,100 @@ export class Bitrix24Client {
     return result === true;
   }
 
-  async listDeals(params: { start?: number; filter?: Record<string, any> } = {}): Promise<BitrixDeal[]> {
+  async listDeals(params: { 
+    start?: number; 
+    filter?: Record<string, any>;
+    order?: Record<string, string>;
+    select?: string[];
+  } = {}): Promise<BitrixDeal[]> {
     return await this.makeRequest('crm.deal.list', params);
+  }
+
+  // CRM Lead Methods
+  async createLead(lead: BitrixLead): Promise<string> {
+    const result = await this.makeRequest('crm.lead.add', { fields: lead });
+    return result.toString();
+  }
+
+  async getLead(id: string): Promise<BitrixLead> {
+    return await this.makeRequest('crm.lead.get', { id });
+  }
+
+  async updateLead(id: string, lead: Partial<BitrixLead>): Promise<boolean> {
+    const result = await this.makeRequest('crm.lead.update', { id, fields: lead });
+    return result === true;
+  }
+
+  async listLeads(params: { 
+    start?: number; 
+    filter?: Record<string, any>;
+    order?: Record<string, string>;
+    select?: string[];
+  } = {}): Promise<BitrixLead[]> {
+    return await this.makeRequest('crm.lead.list', params);
+  }
+
+  // Helper method to get latest leads with proper ordering
+  async getLatestLeads(limit: number = 20): Promise<BitrixLead[]> {
+    // Get ALL leads using pagination to ensure we find the most recent ones
+    let allLeads: BitrixLead[] = [];
+    let start = 0;
+    let hasMore = true;
+    const batchSize = 50;
+    
+    while (hasMore) {
+      const batch = await this.makeRequest('crm.lead.list', {
+        start: start,
+        select: ['*']
+      });
+      
+      if (batch.length === 0) {
+        hasMore = false;
+      } else {
+        allLeads = allLeads.concat(batch);
+        start += batchSize;
+        
+        // Safety check to avoid infinite loop (max 2000 leads)
+        if (start > 2000) {
+          break;
+        }
+      }
+    }
+    
+    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
+    const sortedLeads = allLeads.sort((a: BitrixLead, b: BitrixLead) => {
+      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedLeads.slice(0, limit);
+  }
+
+  // Helper method to get leads from a specific date range
+  async getLeadsFromDateRange(startDate: string, endDate?: string, limit: number = 50): Promise<BitrixLead[]> {
+    const filter: Record<string, any> = {
+      '>=DATE_CREATE': startDate
+    };
+    
+    if (endDate) {
+      filter['<=DATE_CREATE'] = endDate;
+    }
+
+    const leads = await this.makeRequest('crm.lead.list', {
+      start: 0,
+      select: ['*'],
+      filter
+    });
+    
+    // Sort by DATE_CREATE in JavaScript
+    const sortedLeads = leads.sort((a: BitrixLead, b: BitrixLead) => {
+      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedLeads.slice(0, limit);
   }
 
   // Task Methods
@@ -254,6 +408,142 @@ export class Bitrix24Client {
         return false;
       }
     }
+  }
+
+  // Diagnostic Methods
+  async diagnosePermissions(): Promise<any> {
+    const results = {
+      webhook_valid: false,
+      app_info: null,
+      permissions: null,
+      crm_access: false,
+      leads_access: false,
+      contacts_access: false,
+      deals_access: false,
+      error_details: [] as string[]
+    };
+
+    try {
+      // Test basic webhook
+      results.app_info = await this.makeRequest('app.info');
+      results.webhook_valid = true;
+    } catch (error) {
+      results.error_details.push(`app.info failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      // Test permissions endpoint
+      results.permissions = await this.makeRequest('user.access');
+    } catch (error) {
+      results.error_details.push(`user.access failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test CRM access
+    try {
+      await this.listContacts({ start: 0 });
+      results.contacts_access = true;
+      results.crm_access = true;
+    } catch (error) {
+      results.error_details.push(`contacts access failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      await this.listDeals({ start: 0 });
+      results.deals_access = true;
+    } catch (error) {
+      results.error_details.push(`deals access failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test leads access specifically
+    try {
+      await this.makeRequest('crm.lead.list', { start: 0 });
+      results.leads_access = true;
+    } catch (error) {
+      results.error_details.push(`leads access failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return results;
+  }
+
+  async checkCRMSettings(): Promise<any> {
+    const results = {
+      lead_fields: null,
+      lead_statuses: null,
+      crm_mode: null,
+      error_details: [] as string[]
+    };
+
+    try {
+      // Get lead fields to check if leads are available
+      results.lead_fields = await this.makeRequest('crm.lead.fields');
+    } catch (error) {
+      results.error_details.push(`crm.lead.fields failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      // Try to get lead statuses
+      results.lead_statuses = await this.makeRequest('crm.status.list', { filter: { ENTITY_ID: 'STATUS' } });
+    } catch (error) {
+      results.error_details.push(`lead statuses failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    try {
+      // Try to get CRM settings (might not be available via API)
+      results.crm_mode = await this.makeRequest('crm.settings.mode.get');
+    } catch (error) {
+      results.error_details.push(`CRM mode check failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return results;
+  }
+
+  async testLeadsAPI(): Promise<any> {
+    const results = {
+      list_test: null,
+      fields_test: null,
+      count_test: null as number | string | null,
+      simple_list: null,
+      error_details: [] as string[]
+    };
+
+    // Test 1: Basic list with minimal parameters
+    try {
+      results.simple_list = await this.makeRequest('crm.lead.list', { start: 0 });
+    } catch (error) {
+      results.error_details.push(`simple list failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test 2: Get lead fields
+    try {
+      results.fields_test = await this.makeRequest('crm.lead.fields');
+    } catch (error) {
+      results.error_details.push(`fields test failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test 3: List with specific parameters
+    try {
+      results.list_test = await this.makeRequest('crm.lead.list', {
+        select: ['ID', 'TITLE', 'DATE_CREATE'],
+        start: 0,
+        order: { 'ID': 'DESC' }
+      });
+    } catch (error) {
+      results.error_details.push(`parameterized list failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    // Test 4: Try to get count
+    try {
+      const countResult = await this.makeRequest('crm.lead.list', {
+        select: ['ID'],
+        start: 0,
+        filter: {}
+      });
+      results.count_test = Array.isArray(countResult) ? countResult.length : 'Not an array';
+    } catch (error) {
+      results.error_details.push(`count test failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    return results;
   }
 
   private async batchRequest(requests: Array<{ method: string; params: any }>): Promise<any[]> {
