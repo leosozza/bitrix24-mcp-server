@@ -1,12 +1,153 @@
-Logo icon
-Getting Started
-Whats New
-Typical Use-Cases
-API Methods
-GitHub
+# Bitrix24 CRM API Documentation
 
-Search
-Bitrix24 REST API and Market Applications
+## Available Tools
+
+### Deal Management
+
+#### bitrix24_list_deals
+List deals with optional filtering and ordering.
+
+**Parameters:**
+- `limit` (number, optional): Maximum number of deals to return (default: 20)
+- `filter` (object, optional): Filter criteria (e.g., `{"TITLE": "Project"}`)
+- `orderBy` (string, optional): Field to order by - `DATE_CREATE`, `DATE_MODIFY`, `ID`, `TITLE` (default: `DATE_CREATE`)
+- `orderDirection` (string, optional): Order direction - `ASC` or `DESC` (default: `DESC`)
+
+**Example:**
+```javascript
+// Get latest deals from 2025
+{
+  "limit": 20,
+  "filter": {
+    ">=DATE_CREATE": "2025-01-01",
+    "<=DATE_CREATE": "2025-12-31"
+  },
+  "orderBy": "DATE_CREATE",
+  "orderDirection": "DESC"
+}
+```
+
+#### bitrix24_get_latest_deals
+Get the most recent deals ordered by creation date.
+
+**Parameters:**
+- `limit` (number, optional): Maximum number of deals to return (default: 20)
+
+#### bitrix24_get_deals_from_date_range
+Get deals created within a specific date range.
+
+**Parameters:**
+- `startDate` (string, required): Start date in YYYY-MM-DD format
+- `endDate` (string, optional): End date in YYYY-MM-DD format
+- `limit` (number, optional): Maximum number of deals to return (default: 50)
+
+**Example:**
+```javascript
+// Get deals from 2025
+{
+  "startDate": "2025-01-01",
+  "endDate": "2025-12-31",
+  "limit": 50
+}
+```
+
+### Common Date Filter Patterns
+
+#### Correct Date Filtering
+```javascript
+// For deals in 2025
+{
+  "filter": {
+    ">=DATE_CREATE": "2025-01-01",
+    "<=DATE_CREATE": "2025-12-31"
+  }
+}
+
+// For deals from a specific date onwards
+{
+  "filter": {
+    ">=DATE_CREATE": "2025-01-01"
+  }
+}
+
+// For deals before a specific date
+{
+  "filter": {
+    "<=DATE_CREATE": "2025-12-31"
+  }
+}
+```
+
+#### Incorrect Date Filtering (Will cause HTTP 400 errors)
+```javascript
+// ❌ Wrong - This format is not supported
+{
+  "filter": {
+    "DATE_CREATE": "2025"
+  }
+}
+
+// ❌ Wrong - Incorrect operator format
+{
+  "filter": {
+    "<=DATE_CREATE": "2025-12-31",
+    ">=DATE_CREATE": "2025-01-01"
+  }
+}
+```
+
+## Deal Fields Reference
+
+Common deal fields returned by the API:
+- `ID`: Deal ID
+- `TITLE`: Deal title
+- `STAGE_ID`: Current stage (e.g., "NEW", "WON", "LOSE")
+- `OPPORTUNITY`: Deal amount
+- `CURRENCY_ID`: Currency code (e.g., "EUR", "USD")
+- `CONTACT_ID`: Associated contact ID
+- `COMPANY_ID`: Associated company ID
+- `DATE_CREATE`: Creation date
+- `DATE_MODIFY`: Last modification date
+- `BEGINDATE`: Deal start date
+- `CLOSEDATE`: Deal close date
+- `ASSIGNED_BY_ID`: Responsible user ID
+- `COMMENTS`: Deal comments
+
+## Error Handling
+
+### Common Errors and Solutions
+
+1. **HTTP 400: Bad Request**
+   - Usually caused by incorrect filter syntax
+   - Check date format (must be YYYY-MM-DD)
+   - Verify filter operators (`>=`, `<=`, `=`)
+
+2. **No results for recent dates**
+   - Your CRM may not have deals from that period
+   - Check if deals exist using broader date ranges
+   - Verify the DATE_CREATE field contains expected dates
+
+### Troubleshooting Steps
+
+1. First, try getting all deals without filters:
+   ```javascript
+   { "limit": 50 }
+   ```
+
+2. Then add date filtering gradually:
+   ```javascript
+   {
+     "filter": { ">=DATE_CREATE": "2024-01-01" },
+     "limit": 50
+   }
+   ```
+
+3. Check the actual date ranges in your data before filtering for specific years.
+
+---
+
+## Original Bitrix24 Documentation Examples
+
 How to Search in CRM by Phone and E-mail
 Scope: crm
 

@@ -106,12 +106,24 @@ export const getDealTool: Tool = {
 
 export const listDealsTool: Tool = {
   name: 'bitrix24_list_deals',
-  description: 'List deals with optional filtering',
+  description: 'List deals with optional filtering and ordering',
   inputSchema: {
     type: 'object',
     properties: {
       limit: { type: 'number', description: 'Maximum number of deals to return', default: 20 },
-      filter: { type: 'object', description: 'Filter criteria (e.g., {"TITLE": "Project"})' }
+      filter: { type: 'object', description: 'Filter criteria (e.g., {"TITLE": "Project"})' },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
     }
   }
 };
@@ -131,6 +143,31 @@ export const updateDealTool: Tool = {
       comments: { type: 'string', description: 'Deal comments' }
     },
     required: ['id']
+  }
+};
+
+export const getLatestDealsTool: Tool = {
+  name: 'bitrix24_get_latest_deals',
+  description: 'Get the most recent deals ordered by creation date',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of deals to return', default: 20 }
+    }
+  }
+};
+
+export const getDealsFromDateRangeTool: Tool = {
+  name: 'bitrix24_get_deals_from_date_range',
+  description: 'Get deals created within a specific date range',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional)' },
+      limit: { type: 'number', description: 'Maximum number of deals to return', default: 50 }
+    },
+    required: ['startDate']
   }
 };
 
@@ -385,6 +422,8 @@ export const allTools = [
   createDealTool,
   getDealTool,
   listDealsTool,
+  getLatestDealsTool,
+  getDealsFromDateRangeTool,
   updateDealTool,
   createLeadTool,
   getLeadTool,
@@ -465,11 +504,28 @@ export async function executeToolCall(name: string, args: any): Promise<any> {
         return { success: true, deal: dealData };
 
       case 'bitrix24_list_deals':
+        const dealOrder: Record<string, string> = {};
+        dealOrder[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
+        
         const deals = await bitrix24Client.listDeals({
           start: 0,
-          filter: args.filter
+          filter: args.filter,
+          order: dealOrder,
+          select: ['*']
         });
         return { success: true, deals: deals.slice(0, args.limit || 20) };
+
+      case 'bitrix24_get_latest_deals':
+        const latestDeals = await bitrix24Client.getLatestDeals(args.limit || 20);
+        return { success: true, deals: latestDeals };
+
+      case 'bitrix24_get_deals_from_date_range':
+        const dateRangeDeals = await bitrix24Client.getDealsFromDateRange(
+          args.startDate,
+          args.endDate,
+          args.limit || 50
+        );
+        return { success: true, deals: dateRangeDeals };
 
       case 'bitrix24_update_deal':
         const updateDeal: Partial<BitrixDeal> = {};
@@ -505,13 +561,13 @@ export async function executeToolCall(name: string, args: any): Promise<any> {
         return { success: true, lead: leadData };
 
       case 'bitrix24_list_leads':
-        const order: Record<string, string> = {};
-        order[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
+        const leadOrder: Record<string, string> = {};
+        leadOrder[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
         
         const leads = await bitrix24Client.listLeads({
           start: 0,
           filter: args.filter,
-          order,
+          order: leadOrder,
           select: ['*']
         });
         return { success: true, leads: leads.slice(0, args.limit || 20) };

@@ -45,6 +45,11 @@ export interface BitrixDeal {
   BEGINDATE?: string;
   CLOSEDATE?: string;
   COMMENTS?: string;
+  DATE_CREATE?: string;
+  DATE_MODIFY?: string;
+  ASSIGNED_BY_ID?: string;
+  CREATED_BY_ID?: string;
+  MODIFY_BY_ID?: string;
 }
 
 export interface BitrixLead {
@@ -149,6 +154,16 @@ export class Bitrix24Client {
               } else if (fieldValue !== undefined && fieldValue !== null) {
                 body.append(`fields[${fieldKey}]`, String(fieldValue));
               }
+            });
+          } else if (key === 'order' && typeof value === 'object' && value !== null) {
+            // Handle order parameter specially - Bitrix24 expects it as individual parameters
+            Object.entries(value).forEach(([orderKey, orderValue]) => {
+              body.append(`order[${orderKey}]`, String(orderValue));
+            });
+          } else if (key === 'filter' && typeof value === 'object' && value !== null) {
+            // Handle filter parameter specially
+            Object.entries(value).forEach(([filterKey, filterValue]) => {
+              body.append(`filter[${filterKey}]`, String(filterValue));
             });
           } else if (typeof value === 'object' && value !== null) {
             body.append(key, JSON.stringify(value));
@@ -264,6 +279,69 @@ export class Bitrix24Client {
     select?: string[];
   } = {}): Promise<BitrixDeal[]> {
     return await this.makeRequest('crm.deal.list', params);
+  }
+
+  // Helper method to get latest deals with proper ordering
+  async getLatestDeals(limit: number = 20): Promise<BitrixDeal[]> {
+    // Get ALL deals using pagination to ensure we find the most recent ones
+    let allDeals: BitrixDeal[] = [];
+    let start = 0;
+    let hasMore = true;
+    const batchSize = 50;
+    
+    while (hasMore) {
+      const batch = await this.makeRequest('crm.deal.list', {
+        start: start,
+        select: ['*']
+      });
+      
+      if (batch.length === 0) {
+        hasMore = false;
+      } else {
+        allDeals = allDeals.concat(batch);
+        start += batchSize;
+        
+        // Safety check to avoid infinite loop (max 2000 deals)
+        if (start > 2000) {
+          break;
+        }
+      }
+    }
+    
+    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
+    const sortedDeals = allDeals.sort((a: BitrixDeal, b: BitrixDeal) => {
+      const dateA = new Date(a.BEGINDATE || a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.BEGINDATE || b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedDeals.slice(0, limit);
+  }
+
+  // Helper method to get deals from a specific date range
+  async getDealsFromDateRange(startDate: string, endDate?: string, limit: number = 50): Promise<BitrixDeal[]> {
+    const filter: Record<string, any> = {
+      '>=DATE_CREATE': startDate
+    };
+    
+    if (endDate) {
+      filter['<=DATE_CREATE'] = endDate;
+    }
+
+    const deals = await this.makeRequest('crm.deal.list', {
+      start: 0,
+      select: ['*'],
+      filter
+    });
+    
+    // Sort by DATE_CREATE in JavaScript
+    const sortedDeals = deals.sort((a: BitrixDeal, b: BitrixDeal) => {
+      const dateA = new Date(a.BEGINDATE || a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.BEGINDATE || b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedDeals.slice(0, limit);
   }
 
   // CRM Lead Methods
