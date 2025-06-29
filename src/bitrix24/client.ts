@@ -223,38 +223,14 @@ export class Bitrix24Client {
 
   // Helper method to get latest contacts with proper ordering
   async getLatestContacts(limit: number = 20): Promise<BitrixContact[]> {
-    // Get ALL contacts using pagination to ensure we find the most recent ones
-    let allContacts: BitrixContact[] = [];
-    let start = 0;
-    let hasMore = true;
-    const batchSize = 50;
-    
-    while (hasMore) {
-      const batch = await this.makeRequest('crm.contact.list', {
-        start: start
-      });
-      
-      if (batch.length === 0) {
-        hasMore = false;
-      } else {
-        allContacts = allContacts.concat(batch);
-        start += batchSize;
-        
-        // Safety check to avoid infinite loop (max 2000 contacts)
-        if (start > 2000) {
-          break;
-        }
-      }
-    }
-    
-    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
-    const sortedContacts = allContacts.sort((a: BitrixContact, b: BitrixContact) => {
-      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
-      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
-      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    // Use Bitrix24's built-in ordering which works correctly
+    const contacts = await this.makeRequest('crm.contact.list', {
+      start: 0,
+      order: { 'DATE_CREATE': 'DESC' },
+      select: ['*']
     });
     
-    return sortedContacts.slice(0, limit);
+    return contacts.slice(0, limit);
   }
 
   // CRM Deal Methods
@@ -283,39 +259,14 @@ export class Bitrix24Client {
 
   // Helper method to get latest deals with proper ordering
   async getLatestDeals(limit: number = 20): Promise<BitrixDeal[]> {
-    // Get ALL deals using pagination to ensure we find the most recent ones
-    let allDeals: BitrixDeal[] = [];
-    let start = 0;
-    let hasMore = true;
-    const batchSize = 50;
-    
-    while (hasMore) {
-      const batch = await this.makeRequest('crm.deal.list', {
-        start: start,
-        select: ['*']
-      });
-      
-      if (batch.length === 0) {
-        hasMore = false;
-      } else {
-        allDeals = allDeals.concat(batch);
-        start += batchSize;
-        
-        // Safety check to avoid infinite loop (max 2000 deals)
-        if (start > 2000) {
-          break;
-        }
-      }
-    }
-    
-    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
-    const sortedDeals = allDeals.sort((a: BitrixDeal, b: BitrixDeal) => {
-      const dateA = new Date(a.BEGINDATE || a.DATE_CREATE || '1970-01-01');
-      const dateB = new Date(b.BEGINDATE || b.DATE_CREATE || '1970-01-01');
-      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    // Use Bitrix24's built-in ordering which works correctly
+    const deals = await this.makeRequest('crm.deal.list', {
+      start: 0,
+      order: { 'DATE_CREATE': 'DESC' },
+      select: ['*']
     });
     
-    return sortedDeals.slice(0, limit);
+    return deals.slice(0, limit);
   }
 
   // Helper method to get deals from a specific date range
@@ -334,10 +285,10 @@ export class Bitrix24Client {
       filter
     });
     
-    // Sort by DATE_CREATE in JavaScript
+    // Sort by DATE_CREATE in JavaScript for consistency
     const sortedDeals = deals.sort((a: BitrixDeal, b: BitrixDeal) => {
-      const dateA = new Date(a.BEGINDATE || a.DATE_CREATE || '1970-01-01');
-      const dateB = new Date(b.BEGINDATE || b.DATE_CREATE || '1970-01-01');
+      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
       return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
     });
     
@@ -370,39 +321,14 @@ export class Bitrix24Client {
 
   // Helper method to get latest leads with proper ordering
   async getLatestLeads(limit: number = 20): Promise<BitrixLead[]> {
-    // Get ALL leads using pagination to ensure we find the most recent ones
-    let allLeads: BitrixLead[] = [];
-    let start = 0;
-    let hasMore = true;
-    const batchSize = 50;
-    
-    while (hasMore) {
-      const batch = await this.makeRequest('crm.lead.list', {
-        start: start,
-        select: ['*']
-      });
-      
-      if (batch.length === 0) {
-        hasMore = false;
-      } else {
-        allLeads = allLeads.concat(batch);
-        start += batchSize;
-        
-        // Safety check to avoid infinite loop (max 2000 leads)
-        if (start > 2000) {
-          break;
-        }
-      }
-    }
-    
-    // Sort by DATE_CREATE in JavaScript since Bitrix24 order parameter is problematic
-    const sortedLeads = allLeads.sort((a: BitrixLead, b: BitrixLead) => {
-      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
-      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
-      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    // Use Bitrix24's built-in ordering which works correctly
+    const leads = await this.makeRequest('crm.lead.list', {
+      start: 0,
+      order: { 'DATE_CREATE': 'DESC' },
+      select: ['*']
     });
     
-    return sortedLeads.slice(0, limit);
+    return leads.slice(0, limit);
   }
 
   // Helper method to get leads from a specific date range
