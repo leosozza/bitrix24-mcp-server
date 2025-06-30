@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { bitrix24Client, BitrixContact, BitrixDeal, BitrixTask, BitrixLead } from '../bitrix24/client.js';
+import { bitrix24Client, BitrixContact, BitrixDeal, BitrixTask, BitrixLead, BitrixCompany } from '../bitrix24/client.js';
 
 // Contact Management Tools
 export const createContactTool: Tool = {
@@ -278,80 +278,110 @@ export const updateLeadTool: Tool = {
   }
 };
 
-// Task Management Tools
-export const createTaskTool: Tool = {
-  name: 'bitrix24_create_task',
-  description: 'Create a new task in Bitrix24',
+// Company Management Tools
+export const createCompanyTool: Tool = {
+  name: 'bitrix24_create_company',
+  description: 'Create a new company in Bitrix24 CRM',
   inputSchema: {
     type: 'object',
     properties: {
-      title: { type: 'string', description: 'Task title' },
-      description: { type: 'string', description: 'Task description' },
-      responsibleId: { type: 'string', description: 'Responsible user ID' },
-      deadline: { type: 'string', description: 'Deadline in YYYY-MM-DD format' },
-      priority: { 
-        type: 'string', 
-        enum: ['0', '1', '2'],
-        description: 'Priority: 0=Low, 1=Normal, 2=High'
-      },
-      crmEntities: { 
-        type: 'array',
-        items: { type: 'string' },
-        description: 'CRM entity IDs to link (e.g., ["C_123", "D_456"])'
-      }
+      title: { type: 'string', description: 'Company name' },
+      companyType: { type: 'string', description: 'Company type (e.g., CLIENT, SUPPLIER, PARTNER)' },
+      industry: { type: 'string', description: 'Industry sector' },
+      phone: { type: 'string', description: 'Company phone number' },
+      email: { type: 'string', description: 'Company email address' },
+      website: { type: 'string', description: 'Company website URL' },
+      address: { type: 'string', description: 'Company address' },
+      employees: { type: 'string', description: 'Number of employees' },
+      revenue: { type: 'string', description: 'Annual revenue' },
+      comments: { type: 'string', description: 'Additional comments' },
+      assignedById: { type: 'string', description: 'Assigned user ID' }
     },
     required: ['title']
   }
 };
 
-export const getTaskTool: Tool = {
-  name: 'bitrix24_get_task',
-  description: 'Retrieve task information by ID',
+export const getCompanyTool: Tool = {
+  name: 'bitrix24_get_company',
+  description: 'Retrieve company information by ID',
   inputSchema: {
     type: 'object',
     properties: {
-      id: { type: 'string', description: 'Task ID' }
+      id: { type: 'string', description: 'Company ID' }
     },
     required: ['id']
   }
 };
 
-export const listTasksTool: Tool = {
-  name: 'bitrix24_list_tasks',
-  description: 'List tasks with optional filtering',
+export const listCompaniesTool: Tool = {
+  name: 'bitrix24_list_companies',
+  description: 'List companies with optional filtering and ordering',
   inputSchema: {
     type: 'object',
     properties: {
-      limit: { type: 'number', description: 'Maximum number of tasks to return', default: 20 },
-      filter: { type: 'object', description: 'Filter criteria (e.g., {"TITLE": "Project"})' },
-      responsibleId: { type: 'string', description: 'Filter by responsible user ID' }
+      limit: { type: 'number', description: 'Maximum number of companies to return', default: 20 },
+      filter: { type: 'object', description: 'Filter criteria (e.g., {"TITLE": "Tech Corp"})' },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
     }
   }
 };
 
-export const updateTaskTool: Tool = {
-  name: 'bitrix24_update_task',
-  description: 'Update an existing task in Bitrix24',
+export const updateCompanyTool: Tool = {
+  name: 'bitrix24_update_company',
+  description: 'Update an existing company in Bitrix24 CRM',
   inputSchema: {
     type: 'object',
     properties: {
-      id: { type: 'string', description: 'Task ID' },
-      title: { type: 'string', description: 'Task title' },
-      description: { type: 'string', description: 'Task description' },
-      responsibleId: { type: 'string', description: 'Responsible user ID' },
-      deadline: { type: 'string', description: 'Deadline in YYYY-MM-DD format' },
-      priority: { 
-        type: 'string', 
-        enum: ['0', '1', '2'],
-        description: 'Priority: 0=Low, 1=Normal, 2=High'
-      },
-      status: {
-        type: 'string',
-        enum: ['1', '2', '3', '4', '5'],
-        description: 'Status: 1=New, 2=Pending, 3=In Progress, 4=Completed, 5=Deferred'
-      }
+      id: { type: 'string', description: 'Company ID' },
+      title: { type: 'string', description: 'Company name' },
+      companyType: { type: 'string', description: 'Company type' },
+      industry: { type: 'string', description: 'Industry sector' },
+      phone: { type: 'string', description: 'Company phone number' },
+      email: { type: 'string', description: 'Company email address' },
+      website: { type: 'string', description: 'Company website URL' },
+      address: { type: 'string', description: 'Company address' },
+      employees: { type: 'string', description: 'Number of employees' },
+      revenue: { type: 'string', description: 'Annual revenue' },
+      comments: { type: 'string', description: 'Additional comments' },
+      assignedById: { type: 'string', description: 'Assigned user ID' }
     },
     required: ['id']
+  }
+};
+
+export const getLatestCompaniesTool: Tool = {
+  name: 'bitrix24_get_latest_companies',
+  description: 'Get the most recent companies ordered by creation date',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of companies to return', default: 20 }
+    }
+  }
+};
+
+export const getCompaniesFromDateRangeTool: Tool = {
+  name: 'bitrix24_get_companies_from_date_range',
+  description: 'Get companies created within a specific date range',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional)' },
+      limit: { type: 'number', description: 'Maximum number of companies to return', default: 50 }
+    },
+    required: ['startDate']
   }
 };
 
@@ -431,10 +461,12 @@ export const allTools = [
   getLatestLeadsTool,
   getLeadsFromDateRangeTool,
   updateLeadTool,
-  createTaskTool,
-  getTaskTool,
-  listTasksTool,
-  updateTaskTool,
+  createCompanyTool,
+  getCompanyTool,
+  listCompaniesTool,
+  updateCompanyTool,
+  getLatestCompaniesTool,
+  getCompaniesFromDateRangeTool,
   searchCRMTool,
   validateWebhookTool,
   diagnosePermissionsTool,
@@ -601,45 +633,67 @@ export async function executeToolCall(name: string, args: any): Promise<any> {
         const leadUpdated = await bitrix24Client.updateLead(args.id, updateLead);
         return { success: true, updated: leadUpdated, message: `Lead ${args.id} updated successfully` };
 
-      case 'bitrix24_create_task':
-        const task: BitrixTask = {
+      case 'bitrix24_create_company':
+        const company: BitrixCompany = {
           TITLE: args.title,
-          DESCRIPTION: args.description,
-          RESPONSIBLE_ID: args.responsibleId,
-          DEADLINE: args.deadline,
-          PRIORITY: args.priority || '1',
-          UF_CRM_TASK: args.crmEntities
+          COMPANY_TYPE: args.companyType,
+          INDUSTRY: args.industry,
+          PHONE: args.phone ? [{ VALUE: args.phone, VALUE_TYPE: 'WORK' }] : undefined,
+          EMAIL: args.email ? [{ VALUE: args.email, VALUE_TYPE: 'WORK' }] : undefined,
+          WEB: args.website ? [{ VALUE: args.website, VALUE_TYPE: 'WORK' }] : undefined,
+          ADDRESS: args.address,
+          EMPLOYEES: args.employees,
+          REVENUE: args.revenue,
+          COMMENTS: args.comments,
+          ASSIGNED_BY_ID: args.assignedById
         };
-        const taskId = await bitrix24Client.createTask(task);
-        return { success: true, taskId, message: `Task created with ID: ${taskId}` };
+        const companyId = await bitrix24Client.createCompany(company);
+        return { success: true, companyId, message: `Company created with ID: ${companyId}` };
 
-      case 'bitrix24_get_task':
-        const taskData = await bitrix24Client.getTask(args.id);
-        return { success: true, task: taskData };
+      case 'bitrix24_get_company':
+        const companyData = await bitrix24Client.getCompany(args.id);
+        return { success: true, company: companyData };
 
-      case 'bitrix24_list_tasks':
-        const taskFilter: any = args.filter || {};
-        if (args.responsibleId) {
-          taskFilter.RESPONSIBLE_ID = args.responsibleId;
-        }
+      case 'bitrix24_list_companies':
+        const companyOrder: Record<string, string> = {};
+        companyOrder[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
         
-        const tasks = await bitrix24Client.listTasks({
-          filter: taskFilter,
-          start: 0
+        const companies = await bitrix24Client.listCompanies({
+          start: 0,
+          filter: args.filter,
+          order: companyOrder,
+          select: ['*']
         });
-        return { success: true, tasks: tasks.slice(0, args.limit || 20) };
+        return { success: true, companies: companies.slice(0, args.limit || 20) };
 
-      case 'bitrix24_update_task':
-        const updateTask: Partial<BitrixTask> = {};
-        if (args.title) updateTask.TITLE = args.title;
-        if (args.description) updateTask.DESCRIPTION = args.description;
-        if (args.responsibleId) updateTask.RESPONSIBLE_ID = args.responsibleId;
-        if (args.deadline) updateTask.DEADLINE = args.deadline;
-        if (args.priority) updateTask.PRIORITY = args.priority;
-        if (args.status) updateTask.STATUS = args.status;
+      case 'bitrix24_update_company':
+        const updateCompany: Partial<BitrixCompany> = {};
+        if (args.title) updateCompany.TITLE = args.title;
+        if (args.companyType) updateCompany.COMPANY_TYPE = args.companyType;
+        if (args.industry) updateCompany.INDUSTRY = args.industry;
+        if (args.phone) updateCompany.PHONE = [{ VALUE: args.phone, VALUE_TYPE: 'WORK' }];
+        if (args.email) updateCompany.EMAIL = [{ VALUE: args.email, VALUE_TYPE: 'WORK' }];
+        if (args.website) updateCompany.WEB = [{ VALUE: args.website, VALUE_TYPE: 'WORK' }];
+        if (args.address) updateCompany.ADDRESS = args.address;
+        if (args.employees) updateCompany.EMPLOYEES = args.employees;
+        if (args.revenue) updateCompany.REVENUE = args.revenue;
+        if (args.comments) updateCompany.COMMENTS = args.comments;
+        if (args.assignedById) updateCompany.ASSIGNED_BY_ID = args.assignedById;
         
-        const taskUpdated = await bitrix24Client.updateTask(args.id, updateTask);
-        return { success: true, updated: taskUpdated, message: `Task ${args.id} updated successfully` };
+        const companyUpdated = await bitrix24Client.updateCompany(args.id, updateCompany);
+        return { success: true, updated: companyUpdated, message: `Company ${args.id} updated successfully` };
+
+      case 'bitrix24_get_latest_companies':
+        const latestCompanies = await bitrix24Client.getLatestCompanies(args.limit || 20);
+        return { success: true, companies: latestCompanies };
+
+      case 'bitrix24_get_companies_from_date_range':
+        const dateRangeCompanies = await bitrix24Client.getCompaniesFromDateRange(
+          args.startDate,
+          args.endDate,
+          args.limit || 50
+        );
+        return { success: true, companies: dateRangeCompanies };
 
       case 'bitrix24_search_crm':
         const searchResults = await bitrix24Client.searchCRM(args.query, args.entityTypes);

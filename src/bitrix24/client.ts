@@ -88,6 +88,25 @@ export interface BitrixTask {
   UF_CRM_TASK?: string[]; // CRM entities linked to task
 }
 
+export interface BitrixCompany {
+  ID?: string;
+  TITLE?: string;
+  COMPANY_TYPE?: string;
+  INDUSTRY?: string;
+  PHONE?: Array<{ VALUE: string; VALUE_TYPE: string }>;
+  EMAIL?: Array<{ VALUE: string; VALUE_TYPE: string }>;
+  WEB?: Array<{ VALUE: string; VALUE_TYPE: string }>;
+  ADDRESS?: string;
+  EMPLOYEES?: string;
+  REVENUE?: string;
+  COMMENTS?: string;
+  ASSIGNED_BY_ID?: string;
+  CREATED_BY_ID?: string;
+  MODIFY_BY_ID?: string;
+  DATE_CREATE?: string;
+  DATE_MODIFY?: string;
+}
+
 export class Bitrix24Client {
   private baseUrl: string;
   private requestCount = 0;
@@ -355,6 +374,67 @@ export class Bitrix24Client {
     });
     
     return sortedLeads.slice(0, limit);
+  }
+
+  // CRM Company Methods
+  async createCompany(company: BitrixCompany): Promise<string> {
+    const result = await this.makeRequest('crm.company.add', { fields: company });
+    return result.toString();
+  }
+
+  async getCompany(id: string): Promise<BitrixCompany> {
+    return await this.makeRequest('crm.company.get', { id });
+  }
+
+  async updateCompany(id: string, company: Partial<BitrixCompany>): Promise<boolean> {
+    const result = await this.makeRequest('crm.company.update', { id, fields: company });
+    return result === true;
+  }
+
+  async listCompanies(params: { 
+    start?: number; 
+    filter?: Record<string, any>;
+    order?: Record<string, string>;
+    select?: string[];
+  } = {}): Promise<BitrixCompany[]> {
+    return await this.makeRequest('crm.company.list', params);
+  }
+
+  // Helper method to get latest companies with proper ordering
+  async getLatestCompanies(limit: number = 20): Promise<BitrixCompany[]> {
+    const companies = await this.makeRequest('crm.company.list', {
+      start: 0,
+      order: { 'DATE_CREATE': 'DESC' },
+      select: ['*']
+    });
+    
+    return companies.slice(0, limit);
+  }
+
+  // Helper method to get companies from a specific date range
+  async getCompaniesFromDateRange(startDate: string, endDate?: string, limit: number = 50): Promise<BitrixCompany[]> {
+    const filter: Record<string, any> = {
+      '>=DATE_CREATE': startDate
+    };
+    
+    if (endDate) {
+      filter['<=DATE_CREATE'] = endDate;
+    }
+
+    const companies = await this.makeRequest('crm.company.list', {
+      start: 0,
+      select: ['*'],
+      filter
+    });
+    
+    // Sort by DATE_CREATE in JavaScript for consistency
+    const sortedCompanies = companies.sort((a: BitrixCompany, b: BitrixCompany) => {
+      const dateA = new Date(a.DATE_CREATE || '1970-01-01');
+      const dateB = new Date(b.DATE_CREATE || '1970-01-01');
+      return dateB.getTime() - dateA.getTime(); // DESC order (newest first)
+    });
+    
+    return sortedCompanies.slice(0, limit);
   }
 
   // Task Methods
