@@ -442,6 +442,140 @@ export const testLeadsAPITool: Tool = {
   }
 };
 
+// Enhanced Deal Filtering Tools (Phase 1)
+export const getDealPipelinesTool: Tool = {
+  name: 'bitrix24_get_deal_pipelines',
+  description: 'Get all available deal pipelines/categories with their IDs and names',
+  inputSchema: {
+    type: 'object',
+    properties: {}
+  }
+};
+
+export const getDealStagesTool: Tool = {
+  name: 'bitrix24_get_deal_stages',
+  description: 'Get all deal stages for a specific pipeline or all pipelines',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      pipelineId: { 
+        type: 'string', 
+        description: 'Pipeline ID to get stages for (optional - if not provided, gets all stages)' 
+      }
+    }
+  }
+};
+
+export const filterDealsByPipelineTool: Tool = {
+  name: 'bitrix24_filter_deals_by_pipeline',
+  description: 'Filter deals by specific pipeline/category ID',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      pipelineId: { 
+        type: 'string', 
+        description: 'Pipeline/Category ID to filter by' 
+      },
+      limit: { 
+        type: 'number', 
+        description: 'Maximum number of deals to return', 
+        default: 50 
+      },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE', 'OPPORTUNITY'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    },
+    required: ['pipelineId']
+  }
+};
+
+export const filterDealsByBudgetTool: Tool = {
+  name: 'bitrix24_filter_deals_by_budget',
+  description: 'Filter deals by budget/opportunity amount range',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      minBudget: { 
+        type: 'number', 
+        description: 'Minimum budget amount' 
+      },
+      maxBudget: { 
+        type: 'number', 
+        description: 'Maximum budget amount (optional)' 
+      },
+      currency: { 
+        type: 'string', 
+        description: 'Currency code (e.g., EUR, USD)', 
+        default: 'EUR' 
+      },
+      limit: { 
+        type: 'number', 
+        description: 'Maximum number of deals to return', 
+        default: 50 
+      },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE', 'OPPORTUNITY'],
+        description: 'Field to order by',
+        default: 'OPPORTUNITY'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    },
+    required: ['minBudget']
+  }
+};
+
+export const filterDealsByStatusTool: Tool = {
+  name: 'bitrix24_filter_deals_by_status',
+  description: 'Filter deals by stage/status IDs',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      stageIds: { 
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of stage IDs to filter by' 
+      },
+      pipelineId: { 
+        type: 'string', 
+        description: 'Pipeline ID to limit search to (optional)' 
+      },
+      limit: { 
+        type: 'number', 
+        description: 'Maximum number of deals to return', 
+        default: 50 
+      },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE', 'OPPORTUNITY'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    },
+    required: ['stageIds']
+  }
+};
+
 // Export all tools
 export const allTools = [
   createContactTool,
@@ -471,7 +605,13 @@ export const allTools = [
   validateWebhookTool,
   diagnosePermissionsTool,
   checkCRMSettingsTool,
-  testLeadsAPITool
+  testLeadsAPITool,
+  // Phase 1: Enhanced Deal Filtering Tools
+  getDealPipelinesTool,
+  getDealStagesTool,
+  filterDealsByPipelineTool,
+  filterDealsByBudgetTool,
+  filterDealsByStatusTool
 ];
 
 // Tool execution handlers
@@ -714,6 +854,69 @@ export async function executeToolCall(name: string, args: any): Promise<any> {
       case 'bitrix24_test_leads_api':
         const leadsTest = await bitrix24Client.testLeadsAPI();
         return { success: true, tests: leadsTest };
+
+      // Phase 1: Enhanced Deal Filtering Tools
+      case 'bitrix24_get_deal_pipelines':
+        const pipelines = await bitrix24Client.getDealPipelines();
+        return { success: true, pipelines, message: `Found ${pipelines.length} deal pipelines` };
+
+      case 'bitrix24_get_deal_stages':
+        const stages = await bitrix24Client.getDealStages(args.pipelineId);
+        return { success: true, stages, message: `Found ${stages.length} deal stages` };
+
+      case 'bitrix24_filter_deals_by_pipeline':
+        const pipelineDeals = await bitrix24Client.filterDealsByPipeline(args.pipelineId, {
+          limit: args.limit,
+          orderBy: args.orderBy,
+          orderDirection: args.orderDirection
+        });
+        return { 
+          success: true, 
+          deals: pipelineDeals, 
+          count: pipelineDeals.length,
+          message: `Found ${pipelineDeals.length} deals in pipeline ${args.pipelineId}` 
+        };
+
+      case 'bitrix24_filter_deals_by_budget':
+        const budgetDeals = await bitrix24Client.filterDealsByBudget(
+          args.minBudget, 
+          args.maxBudget, 
+          args.currency || 'EUR',
+          {
+            limit: args.limit,
+            orderBy: args.orderBy,
+            orderDirection: args.orderDirection
+          }
+        );
+        const budgetMessage = args.maxBudget 
+          ? `Found ${budgetDeals.length} deals with budget between ${args.minBudget} and ${args.maxBudget} ${args.currency || 'EUR'}`
+          : `Found ${budgetDeals.length} deals with budget ≥ ${args.minBudget} ${args.currency || 'EUR'}`;
+        return { 
+          success: true, 
+          deals: budgetDeals, 
+          count: budgetDeals.length,
+          message: budgetMessage
+        };
+
+      case 'bitrix24_filter_deals_by_status':
+        const statusDeals = await bitrix24Client.filterDealsByStatus(
+          args.stageIds, 
+          args.pipelineId,
+          {
+            limit: args.limit,
+            orderBy: args.orderBy,
+            orderDirection: args.orderDirection
+          }
+        );
+        const statusMessage = args.pipelineId
+          ? `Found ${statusDeals.length} deals with stages [${args.stageIds.join(', ')}] in pipeline ${args.pipelineId}`
+          : `Found ${statusDeals.length} deals with stages [${args.stageIds.join(', ')}]`;
+        return { 
+          success: true, 
+          deals: statusDeals, 
+          count: statusDeals.length,
+          message: statusMessage
+        };
 
       default:
         throw new Error(`Unknown tool: ${name}`);

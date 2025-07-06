@@ -437,6 +437,117 @@ export class Bitrix24Client {
     return sortedCompanies.slice(0, limit);
   }
 
+  // Deal Pipeline and Stage Methods
+  async getDealPipelines(): Promise<any[]> {
+    return await this.makeRequest('crm.dealcategory.list');
+  }
+
+  async getDealStages(pipelineId?: string): Promise<any[]> {
+    const params: Record<string, any> = {};
+    if (pipelineId) {
+      params.id = pipelineId;
+    }
+    return await this.makeRequest('crm.dealcategory.stage.list', params);
+  }
+
+  // Enhanced Deal Filtering Methods
+  async filterDealsByPipeline(pipelineId: string, options: {
+    limit?: number;
+    orderBy?: string;
+    orderDirection?: string;
+    select?: string[];
+  } = {}): Promise<BitrixDeal[]> {
+    const filter: Record<string, any> = {
+      'CATEGORY_ID': pipelineId
+    };
+
+    const order: Record<string, string> = {};
+    if (options.orderBy) {
+      order[options.orderBy] = options.orderDirection || 'DESC';
+    }
+
+    const deals = await this.makeRequest('crm.deal.list', {
+      start: 0,
+      filter,
+      order: Object.keys(order).length > 0 ? order : { 'DATE_CREATE': 'DESC' },
+      select: options.select || ['*']
+    });
+
+    return deals.slice(0, options.limit || 50);
+  }
+
+  async filterDealsByBudget(minBudget: number, maxBudget?: number, currency: string = 'EUR', options: {
+    limit?: number;
+    orderBy?: string;
+    orderDirection?: string;
+    select?: string[];
+  } = {}): Promise<BitrixDeal[]> {
+    const filter: Record<string, any> = {
+      '>=OPPORTUNITY': minBudget.toString()
+    };
+
+    if (maxBudget) {
+      filter['<=OPPORTUNITY'] = maxBudget.toString();
+    }
+
+    // Add currency filter if specified
+    if (currency) {
+      filter['CURRENCY_ID'] = currency;
+    }
+
+    const order: Record<string, string> = {};
+    if (options.orderBy) {
+      order[options.orderBy] = options.orderDirection || 'DESC';
+    }
+
+    const deals = await this.makeRequest('crm.deal.list', {
+      start: 0,
+      filter,
+      order: Object.keys(order).length > 0 ? order : { 'OPPORTUNITY': 'DESC' },
+      select: options.select || ['*']
+    });
+
+    return deals.slice(0, options.limit || 50);
+  }
+
+  async filterDealsByStatus(stageIds: string[], pipelineId?: string, options: {
+    limit?: number;
+    orderBy?: string;
+    orderDirection?: string;
+    select?: string[];
+  } = {}): Promise<BitrixDeal[]> {
+    const filter: Record<string, any> = {};
+
+    // Handle multiple stage IDs
+    if (stageIds.length === 1) {
+      filter['STAGE_ID'] = stageIds[0];
+    } else {
+      // For multiple stages, we need to use the @STAGE_ID syntax
+      stageIds.forEach((stageId, index) => {
+        filter[`@STAGE_ID[${index}]`] = stageId;
+      });
+    }
+
+    // Add pipeline filter if specified
+    if (pipelineId) {
+      filter['CATEGORY_ID'] = pipelineId;
+    }
+
+    const order: Record<string, string> = {};
+    if (options.orderBy) {
+      order[options.orderBy] = options.orderDirection || 'DESC';
+    }
+
+    const deals = await this.makeRequest('crm.deal.list', {
+      start: 0,
+      filter,
+      order: Object.keys(order).length > 0 ? order : { 'DATE_CREATE': 'DESC' },
+      select: options.select || ['*']
+    });
+
+    return deals.slice(0, options.limit || 50);
+  }
+
   // Task Methods
   async createTask(task: BitrixTask): Promise<string> {
     const result = await this.makeRequest('tasks.task.add', { fields: task });
