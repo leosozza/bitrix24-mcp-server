@@ -12,7 +12,13 @@
     "build:unix": "tsc && chmod +x build/index.js",
     "dev": "tsc --watch",
     "start": "node build/index.js",
-    "test": "node test/integration.test.js"
+    "test": "node test/integration.test.js",
+    "postinstall": "npm run build",
+    "azure:start": "node build/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   },
   "files": ["build"],
   "dependencies": {
