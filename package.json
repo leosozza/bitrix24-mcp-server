@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "Bitrix24 MCP Server for AI Agent Integration",
-  "main": "build/index.js",
+  "main": "server.js",
   "bin": {
     "bitrix24-mcp": "./build/index.js"
   },
@@ -11,10 +11,10 @@
     "build": "tsc",
     "build:unix": "tsc && chmod +x build/index.js",
     "dev": "tsc --watch",
-    "start": "node build/index.js",
+    "start": "node server.js",
     "test": "node test/integration.test.js",
     "postinstall": "npm run build",
-    "azure:start": "node build/index.js"
+    "azure:start": "node server.js"
   },
   "engines": {
     "node": ">=18.0.0",
