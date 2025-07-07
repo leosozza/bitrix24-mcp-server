@@ -96,3 +96,13 @@ jspm_packages/
 
 # TernJS port file
 .tern-port
+
+# Deployment files and packages
+*.zip
+deployment/
+deploy-package/
+package-deploy.json
+
+# Azure deployment files (keeping web.config as it's needed)
+.deployment
+deploy.cmd
