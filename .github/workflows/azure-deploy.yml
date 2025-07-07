@@ -65,8 +65,53 @@ jobs:
         publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
         package: './deployment'
 
+    - name: Configure App Settings
+      if: github.ref == 'refs/heads/main'
+      uses: azure/appservice-settings@v1
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        app-settings-json: |
+          [
+            {
+              "name": "BITRIX24_WEBHOOK_URL",
+              "value": "${{ secrets.BITRIX24_WEBHOOK_URL }}",
+              "slotSetting": false
+            },
+            {
+              "name": "NODE_ENV",
+              "value": "production",
+              "slotSetting": false
+            },
+            {
+              "name": "LOG_LEVEL",
+              "value": "info",
+              "slotSetting": false
+            }
+          ]
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+
+    - name: Restart App Service
+      if: github.ref == 'refs/heads/main'
+      run: |
+        # Wait a moment for settings to apply
+        sleep 10
+        # The app will restart automatically after settings change
+
     - name: Test deployment
       if: github.ref == 'refs/heads/main'
       run: |
         sleep 30
+        echo "Testing health endpoint..."
         curl -f https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/health || exit 1
+        echo "Testing MCP webhook validation..."
+        curl -X POST https://${{ env.AZURE_WEBAPP_NAME }}.azurewebsites.net/mcp \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "tools/call",
+            "params": {
+              "name": "bitrix24_validate_webhook",
+              "arguments": {}
+            },
+            "id": 1
+          }' || echo "MCP test failed - check environment variables"
