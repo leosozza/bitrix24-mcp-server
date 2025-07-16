@@ -579,6 +579,81 @@ export class Bitrix24Client {
     return await this.makeRequest('user.current');
   }
 
+  // User Management Methods
+  async getUser(userId: string): Promise<any> {
+    return await this.makeRequest('user.get', { ID: userId });
+  }
+
+  async getAllUsers(): Promise<any[]> {
+    return await this.makeRequest('user.get');
+  }
+
+  async getUsersByIds(userIds: string[]): Promise<any[]> {
+    const results = [];
+    for (const userId of userIds) {
+      try {
+        const user = await this.getUser(userId);
+        results.push(user);
+      } catch (error) {
+        console.error(`Error fetching user ${userId}:`, error);
+        results.push({ ID: userId, NAME: 'Unknown', LAST_NAME: 'User', ERROR: error instanceof Error ? error.message : String(error) });
+      }
+    }
+    return results;
+  }
+
+  async resolveUserNames(userIds: string[]): Promise<Record<string, string>> {
+    const userMap: Record<string, string> = {};
+    
+    try {
+      const users = await this.getUsersByIds(userIds);
+      for (const user of users) {
+        const fullName = `${user.NAME || ''} ${user.LAST_NAME || ''}`.trim();
+        userMap[user.ID] = fullName || `User ${user.ID}`;
+      }
+    } catch (error) {
+      console.error('Error resolving user names:', error);
+      // Fallback: return IDs as names
+      userIds.forEach(id => {
+        userMap[id] = `User ${id}`;
+      });
+    }
+    
+    return userMap;
+  }
+
+  async enhanceWithUserNames<T extends Record<string, any>>(
+    items: T[],
+    userIdFields: string[] = ['ASSIGNED_BY_ID', 'CREATED_BY_ID', 'MODIFY_BY_ID']
+  ): Promise<T[]> {
+    // Collect all unique user IDs
+    const allUserIds = new Set<string>();
+    
+    items.forEach(item => {
+      userIdFields.forEach(field => {
+        if (item[field] && typeof item[field] === 'string') {
+          allUserIds.add(item[field]);
+        }
+      });
+    });
+
+    // Resolve user names
+    const userNames = await this.resolveUserNames(Array.from(allUserIds));
+
+    // Enhance items with user names
+    return items.map(item => {
+      const enhanced = { ...item } as any;
+      
+      userIdFields.forEach(field => {
+        if (item[field] && userNames[item[field]]) {
+          enhanced[`${field}_NAME`] = userNames[item[field]];
+        }
+      });
+      
+      return enhanced as T;
+    });
+  }
+
   async searchCRM(query: string, entityTypes: string[] = ['contact', 'company', 'deal', 'lead']): Promise<any> {
     return await this.makeRequest('crm.duplicate.findbycomm', {
       entity_type: entityTypes.join(','),
@@ -749,6 +824,585 @@ export class Bitrix24Client {
       results.push(result);
     }
     return results;
+  }
+
+  // Sales Team Monitoring Methods
+  async monitorUserActivities(
+    userId?: string,
+    startDate?: string,
+    endDate?: string,
+    options: {
+      includeCallVolume?: boolean;
+      includeEmailActivity?: boolean;
+      includeTimelineActivity?: boolean;
+      includeResponseTimes?: boolean;
+    } = {}
+  ): Promise<any> {
+    const endDateToUse = endDate || new Date().toISOString().split('T')[0];
+    const results: any = {
+      userId: userId || 'all_users',
+      period: { startDate, endDate: endDateToUse },
+      metrics: {}
+    };
+
+    try {
+      // Get users to monitor
+      const users = userId ? [{ ID: userId }] : await this.makeRequest('user.get');
+      
+      for (const user of users) {
+        const userMetrics: any = {
+          userId: user.ID,
+          userName: `${user.NAME || ''} ${user.LAST_NAME || ''}`.trim(),
+          activities: {}
+        };
+
+        // Monitor call volume
+        if (options.includeCallVolume) {
+          try {
+            const callActivities = await this.makeRequest('crm.activity.list', {
+              filter: {
+                TYPE_ID: 2, // Call activities
+                RESPONSIBLE_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'DATE_CREATE', 'DIRECTION', 'SUBJECT']
+            });
+            
+            userMetrics.activities.calls = {
+              total: callActivities.length,
+              incoming: callActivities.filter((a: any) => a.DIRECTION === '1').length,
+              outgoing: callActivities.filter((a: any) => a.DIRECTION === '2').length,
+              details: callActivities
+            };
+          } catch (error) {
+            userMetrics.activities.calls = { error: `Failed to get call data: ${error}` };
+          }
+        }
+
+        // Monitor email activity
+        if (options.includeEmailActivity) {
+          try {
+            const emailActivities = await this.makeRequest('crm.activity.list', {
+              filter: {
+                TYPE_ID: 4, // Email activities
+                RESPONSIBLE_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'DATE_CREATE', 'DIRECTION', 'SUBJECT']
+            });
+            
+            userMetrics.activities.emails = {
+              total: emailActivities.length,
+              incoming: emailActivities.filter((a: any) => a.DIRECTION === '1').length,
+              outgoing: emailActivities.filter((a: any) => a.DIRECTION === '2').length,
+              details: emailActivities
+            };
+          } catch (error) {
+            userMetrics.activities.emails = { error: `Failed to get email data: ${error}` };
+          }
+        }
+
+        // Monitor timeline activity
+        if (options.includeTimelineActivity) {
+          try {
+            const timelineEntries = await this.makeRequest('crm.timeline.comment.list', {
+              filter: {
+                AUTHOR_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              }
+            });
+            
+            userMetrics.activities.timeline = {
+              total: timelineEntries.length,
+              details: timelineEntries
+            };
+          } catch (error) {
+            userMetrics.activities.timeline = { error: `Failed to get timeline data: ${error}` };
+          }
+        }
+
+        // Calculate response times
+        if (options.includeResponseTimes) {
+          try {
+            const allActivities = await this.makeRequest('crm.activity.list', {
+              filter: {
+                RESPONSIBLE_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'DATE_CREATE', 'DIRECTION', 'TYPE_ID'],
+              order: { DATE_CREATE: 'ASC' }
+            });
+
+            const responseTimes = this.calculateResponseTimes(allActivities);
+            userMetrics.activities.responseTimes = responseTimes;
+          } catch (error) {
+            userMetrics.activities.responseTimes = { error: `Failed to calculate response times: ${error}` };
+          }
+        }
+
+        results.metrics[user.ID] = userMetrics;
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error monitoring user activities:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async getUserPerformanceSummary(
+    userId?: string,
+    startDate?: string,
+    endDate?: string,
+    options: {
+      includeDealMetrics?: boolean;
+      includeActivityRatios?: boolean;
+      includeConversionRates?: boolean;
+    } = {}
+  ): Promise<any> {
+    const endDateToUse = endDate || new Date().toISOString().split('T')[0];
+    const results: any = {
+      userId: userId || 'all_users',
+      period: { startDate, endDate: endDateToUse },
+      performance: {}
+    };
+
+    try {
+      const users = userId ? [{ ID: userId }] : await this.makeRequest('user.get');
+      
+      for (const user of users) {
+        const userPerformance: any = {
+          userId: user.ID,
+          userName: `${user.NAME || ''} ${user.LAST_NAME || ''}`.trim(),
+          metrics: {}
+        };
+
+        // Deal metrics
+        if (options.includeDealMetrics) {
+          try {
+            const deals = await this.makeRequest('crm.deal.list', {
+              filter: {
+                ASSIGNED_BY_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'TITLE', 'OPPORTUNITY', 'STAGE_ID', 'DATE_CREATE', 'CLOSEDATE']
+            });
+
+            const wonDeals = deals.filter((d: any) => d.STAGE_ID?.includes('WON') || d.STAGE_ID?.includes('SUCCESS'));
+            const lostDeals = deals.filter((d: any) => d.STAGE_ID?.includes('LOST') || d.STAGE_ID?.includes('FAIL'));
+
+            userPerformance.metrics.deals = {
+              total: deals.length,
+              won: wonDeals.length,
+              lost: lostDeals.length,
+              inProgress: deals.length - wonDeals.length - lostDeals.length,
+              totalValue: deals.reduce((sum: number, d: any) => sum + (parseFloat(d.OPPORTUNITY) || 0), 0),
+              wonValue: wonDeals.reduce((sum: number, d: any) => sum + (parseFloat(d.OPPORTUNITY) || 0), 0),
+              winRate: deals.length > 0 ? (wonDeals.length / deals.length * 100).toFixed(2) : '0'
+            };
+          } catch (error) {
+            userPerformance.metrics.deals = { error: `Failed to get deal metrics: ${error}` };
+          }
+        }
+
+        // Activity ratios
+        if (options.includeActivityRatios) {
+          try {
+            const activities = await this.makeRequest('crm.activity.list', {
+              filter: {
+                RESPONSIBLE_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'TYPE_ID', 'DIRECTION']
+            });
+
+            const activityCounts = activities.reduce((acc: any, activity: any) => {
+              const type = activity.TYPE_ID;
+              acc[type] = (acc[type] || 0) + 1;
+              return acc;
+            }, {});
+
+            userPerformance.metrics.activityRatios = {
+              total: activities.length,
+              breakdown: activityCounts,
+              callsToEmails: activityCounts['2'] && activityCounts['4'] ? 
+                (activityCounts['2'] / activityCounts['4']).toFixed(2) : 'N/A'
+            };
+          } catch (error) {
+            userPerformance.metrics.activityRatios = { error: `Failed to get activity ratios: ${error}` };
+          }
+        }
+
+        // Conversion rates
+        if (options.includeConversionRates) {
+          try {
+            const leads = await this.makeRequest('crm.lead.list', {
+              filter: {
+                ASSIGNED_BY_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'STATUS_ID']
+            });
+
+            const deals = await this.makeRequest('crm.deal.list', {
+              filter: {
+                ASSIGNED_BY_ID: user.ID,
+                '>=DATE_CREATE': startDate,
+                '<=DATE_CREATE': endDateToUse
+              },
+              select: ['ID', 'STAGE_ID']
+            });
+
+            const convertedLeads = leads.filter((l: any) => l.STATUS_ID === 'CONVERTED').length;
+            const leadToDealConversion = leads.length > 0 ? 
+              (convertedLeads / leads.length * 100).toFixed(2) : '0';
+
+            userPerformance.metrics.conversionRates = {
+              totalLeads: leads.length,
+              convertedLeads: convertedLeads,
+              leadToDealConversion: leadToDealConversion + '%',
+              totalDeals: deals.length
+            };
+          } catch (error) {
+            userPerformance.metrics.conversionRates = { error: `Failed to get conversion rates: ${error}` };
+          }
+        }
+
+        results.performance[user.ID] = userPerformance;
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error getting user performance summary:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async analyzeAccountPerformance(
+    accountId: string,
+    accountType: 'company' | 'contact',
+    startDate?: string,
+    endDate?: string,
+    options: {
+      includeAllInteractions?: boolean;
+      includeDealProgression?: boolean;
+      includeTimelineHistory?: boolean;
+    } = {}
+  ): Promise<any> {
+    const endDateToUse = endDate || new Date().toISOString().split('T')[0];
+    const results: any = {
+      accountId,
+      accountType,
+      period: { startDate, endDate: endDateToUse },
+      analysis: {}
+    };
+
+    try {
+      // Get account details
+      const accountData = accountType === 'company' 
+        ? await this.getCompany(accountId)
+        : await this.getContact(accountId);
+      
+      results.accountDetails = accountData;
+
+      // Get all interactions
+      if (options.includeAllInteractions) {
+        const filterKey = accountType === 'company' ? 'COMPANY_ID' : 'CONTACT_ID';
+        
+        const activities = await this.makeRequest('crm.activity.list', {
+          filter: {
+            [filterKey]: accountId,
+            '>=DATE_CREATE': startDate,
+            '<=DATE_CREATE': endDateToUse
+          },
+          select: ['ID', 'TYPE_ID', 'SUBJECT', 'DATE_CREATE', 'RESPONSIBLE_ID', 'DIRECTION']
+        });
+
+        results.analysis.interactions = {
+          total: activities.length,
+          byType: activities.reduce((acc: any, activity: any) => {
+            const type = activity.TYPE_ID;
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+          }, {}),
+          byUser: activities.reduce((acc: any, activity: any) => {
+            const userId = activity.RESPONSIBLE_ID;
+            acc[userId] = (acc[userId] || 0) + 1;
+            return acc;
+          }, {}),
+          details: activities
+        };
+      }
+
+      // Deal progression
+      if (options.includeDealProgression) {
+        const filterKey = accountType === 'company' ? 'COMPANY_ID' : 'CONTACT_ID';
+        
+        const deals = await this.makeRequest('crm.deal.list', {
+          filter: {
+            [filterKey]: accountId,
+            '>=DATE_CREATE': startDate,
+            '<=DATE_CREATE': endDateToUse
+          },
+          select: ['ID', 'TITLE', 'STAGE_ID', 'OPPORTUNITY', 'DATE_CREATE', 'CLOSEDATE', 'ASSIGNED_BY_ID']
+        });
+
+        results.analysis.dealProgression = {
+          total: deals.length,
+          totalValue: deals.reduce((sum: number, d: any) => sum + (parseFloat(d.OPPORTUNITY) || 0), 0),
+          byStage: deals.reduce((acc: any, deal: any) => {
+            const stage = deal.STAGE_ID;
+            acc[stage] = (acc[stage] || 0) + 1;
+            return acc;
+          }, {}),
+          details: deals
+        };
+      }
+
+      // Timeline history
+      if (options.includeTimelineHistory) {
+        const entityType = accountType === 'company' ? 'COMPANY' : 'CONTACT';
+        
+        try {
+          const timelineEntries = await this.makeRequest('crm.timeline.comment.list', {
+            filter: {
+              ENTITY_TYPE: entityType,
+              ENTITY_ID: accountId,
+              '>=DATE_CREATE': startDate,
+              '<=DATE_CREATE': endDateToUse
+            }
+          });
+
+          results.analysis.timelineHistory = {
+            total: timelineEntries.length,
+            details: timelineEntries
+          };
+        } catch (error) {
+          results.analysis.timelineHistory = { error: `Failed to get timeline: ${error}` };
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error analyzing account performance:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async compareUserPerformance(
+    userIds?: string[],
+    startDate?: string,
+    endDate?: string,
+    options: {
+      metrics?: string[];
+      includeRankings?: boolean;
+      includeTrends?: boolean;
+    } = {}
+  ): Promise<any> {
+    const endDateToUse = endDate || new Date().toISOString().split('T')[0];
+    const results: any = {
+      period: { startDate, endDate: endDateToUse },
+      comparison: {},
+      rankings: {}
+    };
+
+    try {
+      const users = userIds?.length ? 
+        userIds.map(id => ({ ID: id })) : 
+        await this.makeRequest('user.get');
+
+      const metricsToCompare = options.metrics || ['activities', 'deals', 'conversions'];
+
+      for (const user of users) {
+        const userComparison: any = {
+          userId: user.ID,
+          userName: `${user.NAME || ''} ${user.LAST_NAME || ''}`.trim(),
+          metrics: {}
+        };
+
+        // Activities comparison
+        if (metricsToCompare.includes('activities')) {
+          const activities = await this.makeRequest('crm.activity.list', {
+            filter: {
+              RESPONSIBLE_ID: user.ID,
+              '>=DATE_CREATE': startDate,
+              '<=DATE_CREATE': endDateToUse
+            },
+            select: ['ID', 'TYPE_ID']
+          });
+
+          userComparison.metrics.activities = {
+            total: activities.length,
+            calls: activities.filter((a: any) => a.TYPE_ID === '2').length,
+            emails: activities.filter((a: any) => a.TYPE_ID === '4').length,
+            meetings: activities.filter((a: any) => a.TYPE_ID === '1').length
+          };
+        }
+
+        // Deals comparison
+        if (metricsToCompare.includes('deals')) {
+          const deals = await this.makeRequest('crm.deal.list', {
+            filter: {
+              ASSIGNED_BY_ID: user.ID,
+              '>=DATE_CREATE': startDate,
+              '<=DATE_CREATE': endDateToUse
+            },
+            select: ['ID', 'OPPORTUNITY', 'STAGE_ID']
+          });
+
+          const wonDeals = deals.filter((d: any) => d.STAGE_ID?.includes('WON') || d.STAGE_ID?.includes('SUCCESS'));
+          
+          userComparison.metrics.deals = {
+            total: deals.length,
+            won: wonDeals.length,
+            totalValue: deals.reduce((sum: number, d: any) => sum + (parseFloat(d.OPPORTUNITY) || 0), 0),
+            wonValue: wonDeals.reduce((sum: number, d: any) => sum + (parseFloat(d.OPPORTUNITY) || 0), 0),
+            winRate: deals.length > 0 ? (wonDeals.length / deals.length * 100).toFixed(2) : '0'
+          };
+        }
+
+        // Conversions comparison
+        if (metricsToCompare.includes('conversions')) {
+          const leads = await this.makeRequest('crm.lead.list', {
+            filter: {
+              ASSIGNED_BY_ID: user.ID,
+              '>=DATE_CREATE': startDate,
+              '<=DATE_CREATE': endDateToUse
+            },
+            select: ['ID', 'STATUS_ID']
+          });
+
+          const convertedLeads = leads.filter((l: any) => l.STATUS_ID === 'CONVERTED').length;
+          
+          userComparison.metrics.conversions = {
+            totalLeads: leads.length,
+            convertedLeads: convertedLeads,
+            conversionRate: leads.length > 0 ? (convertedLeads / leads.length * 100).toFixed(2) : '0'
+          };
+        }
+
+        results.comparison[user.ID] = userComparison;
+      }
+
+      // Generate rankings
+      if (options.includeRankings) {
+        results.rankings = this.generateUserRankings(results.comparison, metricsToCompare);
+      }
+
+      return results;
+    } catch (error) {
+      console.error('Error comparing user performance:', error);
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  // Helper methods
+  private calculateResponseTimes(activities: any[]): any {
+    const incomingActivities = activities.filter(a => a.DIRECTION === '1');
+    const outgoingActivities = activities.filter(a => a.DIRECTION === '2');
+    
+    const responseTimes: number[] = [];
+    
+    incomingActivities.forEach(incoming => {
+      const nextOutgoing = outgoingActivities.find(outgoing => 
+        new Date(outgoing.DATE_CREATE) > new Date(incoming.DATE_CREATE)
+      );
+      
+      if (nextOutgoing) {
+        const responseTime = new Date(nextOutgoing.DATE_CREATE).getTime() - new Date(incoming.DATE_CREATE).getTime();
+        responseTimes.push(responseTime / (1000 * 60 * 60)); // Convert to hours
+      }
+    });
+
+    return {
+      averageResponseTime: responseTimes.length > 0 ? 
+        (responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length).toFixed(2) + ' hours' : 
+        'N/A',
+      totalResponses: responseTimes.length,
+      fastestResponse: responseTimes.length > 0 ? Math.min(...responseTimes).toFixed(2) + ' hours' : 'N/A',
+      slowestResponse: responseTimes.length > 0 ? Math.max(...responseTimes).toFixed(2) + ' hours' : 'N/A'
+    };
+  }
+
+  private generateUserRankings(comparison: any, metrics: string[]): any {
+    const rankings: any = {};
+    
+    metrics.forEach(metric => {
+      const users = Object.values(comparison) as any[];
+      
+      switch (metric) {
+        case 'activities':
+          rankings.activities = users
+            .sort((a, b) => (b.metrics.activities?.total || 0) - (a.metrics.activities?.total || 0))
+            .map((user, index) => ({
+              rank: index + 1,
+              userId: user.userId,
+              userName: user.userName,
+              value: user.metrics.activities?.total || 0
+            }));
+          break;
+        case 'deals':
+          rankings.deals = users
+            .sort((a, b) => (b.metrics.deals?.wonValue || 0) - (a.metrics.deals?.wonValue || 0))
+            .map((user, index) => ({
+              rank: index + 1,
+              userId: user.userId,
+              userName: user.userName,
+              value: user.metrics.deals?.wonValue || 0
+            }));
+          break;
+        case 'conversions':
+          rankings.conversions = users
+            .sort((a, b) => (parseFloat(b.metrics.conversions?.conversionRate) || 0) - (parseFloat(a.metrics.conversions?.conversionRate) || 0))
+            .map((user, index) => ({
+              rank: index + 1,
+              userId: user.userId,
+              userName: user.userName,
+              value: user.metrics.conversions?.conversionRate || '0'
+            }));
+          break;
+      }
+    });
+
+    return rankings;
+  }
+
+  // Placeholder methods for remaining monitoring tools
+  async trackDealProgression(dealId?: string, userId?: string, pipelineId?: string, startDate?: string, endDate?: string, options: any = {}): Promise<any> {
+    // Implementation for deal progression tracking
+    return { message: 'Deal progression tracking - implementation in progress' };
+  }
+
+  async monitorSalesActivities(userId?: string, startDate?: string, endDate?: string, options: any = {}): Promise<any> {
+    // Implementation for sales activities monitoring
+    return { message: 'Sales activities monitoring - implementation in progress' };
+  }
+
+  async generateSalesReport(reportType: string, startDate?: string, endDate?: string, options: any = {}): Promise<any> {
+    // Implementation for sales report generation
+    return { message: 'Sales report generation - implementation in progress' };
+  }
+
+  async getTeamDashboard(options: any = {}): Promise<any> {
+    // Implementation for team dashboard
+    return { message: 'Team dashboard - implementation in progress' };
+  }
+
+  async analyzeCustomerEngagement(accountId?: string, accountType?: string, userId?: string, startDate?: string, endDate?: string, options: any = {}): Promise<any> {
+    // Implementation for customer engagement analysis
+    return { message: 'Customer engagement analysis - implementation in progress' };
+  }
+
+  async forecastPerformance(forecastType: string, userId?: string, options: any = {}): Promise<any> {
+    // Implementation for performance forecasting
+    return { message: 'Performance forecasting - implementation in progress' };
   }
 }
 

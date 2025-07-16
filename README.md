@@ -31,10 +31,57 @@ A comprehensive Model Context Protocol (MCP) server for Bitrix24 CRM integration
 - `bitrix24_list_tasks` - List tasks with filtering
 - `bitrix24_update_task` - Update existing tasks
 
+### User Management
+- `bitrix24_get_user` - Get user information by ID
+- `bitrix24_get_all_users` - Get all users in the system with names and details
+- `bitrix24_resolve_user_names` - Resolve user IDs to user names
+- `bitrix24_get_contacts_with_user_names` - Get contacts with user names resolved
+- `bitrix24_get_deals_with_user_names` - Get deals with user names resolved
+- `bitrix24_get_leads_with_user_names` - Get leads with user names resolved
+- `bitrix24_get_companies_with_user_names` - Get companies with user names resolved
+
+### Lead Management
+- `bitrix24_create_lead` - Create new leads
+- `bitrix24_get_lead` - Retrieve lead by ID
+- `bitrix24_list_leads` - List leads with filtering
+- `bitrix24_get_latest_leads` - Get most recent leads
+- `bitrix24_get_leads_from_date_range` - Get leads from specific date range
+- `bitrix24_update_lead` - Update existing leads
+
+### Company Management
+- `bitrix24_create_company` - Create new companies
+- `bitrix24_get_company` - Retrieve company by ID
+- `bitrix24_list_companies` - List companies with filtering
+- `bitrix24_get_latest_companies` - Get most recent companies
+- `bitrix24_get_companies_from_date_range` - Get companies from specific date range
+- `bitrix24_update_company` - Update existing companies
+
+### Enhanced Deal Filtering
+- `bitrix24_get_deal_pipelines` - Get all deal pipelines/categories
+- `bitrix24_get_deal_stages` - Get deal stages for pipelines
+- `bitrix24_filter_deals_by_pipeline` - Filter deals by pipeline
+- `bitrix24_filter_deals_by_budget` - Filter deals by budget range
+- `bitrix24_filter_deals_by_status` - Filter deals by stage/status
+
 ### Utilities
 - `bitrix24_search_crm` - Search across CRM entities
 - `bitrix24_get_current_user` - Get current user info
 - `bitrix24_validate_webhook` - Validate webhook connection
+- `bitrix24_diagnose_permissions` - Diagnose webhook permissions
+- `bitrix24_check_crm_settings` - Check CRM settings and configuration
+- `bitrix24_test_leads_api` - Test leads API endpoints
+
+### Sales Team Monitoring
+- `bitrix24_monitor_user_activities` - Monitor user activities (calls, emails, timeline interactions, response times)
+- `bitrix24_get_user_performance_summary` - Get comprehensive performance summary with deal metrics and conversion rates
+- `bitrix24_analyze_account_performance` - Analyze performance for specific accounts (companies/contacts)
+- `bitrix24_compare_user_performance` - Compare performance metrics between multiple users
+- `bitrix24_track_deal_progression` - Track deal progression through pipeline stages with timing analysis
+- `bitrix24_monitor_sales_activities` - Monitor sales-related activities (tasks, follow-ups, meetings)
+- `bitrix24_generate_sales_report` - Generate comprehensive sales reports with customizable metrics
+- `bitrix24_get_team_dashboard` - Get real-time team performance dashboard
+- `bitrix24_analyze_customer_engagement` - Analyze customer engagement patterns and relationship health
+- `bitrix24_forecast_performance` - Generate performance forecasts and predictive analytics
 
 ## 🛠️ Installation
 
@@ -246,6 +293,13 @@ Set `NODE_ENV=development` and `LOG_LEVEL=debug` in your `.env` file for detaile
 - `getTask(id: string): Promise<BitrixTask>`
 - `updateTask(id: string, task: Partial<BitrixTask>): Promise<boolean>`
 - `listTasks(params?: TaskListParams): Promise<BitrixTask[]>`
+
+#### Users
+- `getUser(userId: string): Promise<any>`
+- `getAllUsers(): Promise<any[]>`
+- `getUsersByIds(userIds: string[]): Promise<any[]>`
+- `resolveUserNames(userIds: string[]): Promise<Record<string, string>>`
+- `enhanceWithUserNames<T>(items: T[], userIdFields?: string[]): Promise<T[]>`
 
 #### Utilities
 - `getCurrentUser(): Promise<any>`

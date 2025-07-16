@@ -576,6 +576,342 @@ export const filterDealsByStatusTool: Tool = {
   }
 };
 
+// Sales Team Monitoring Tools
+export const monitorUserActivitiesTool: Tool = {
+  name: 'bitrix24_monitor_user_activities',
+  description: 'Monitor user activities including calls, emails, timeline interactions, and response times',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userId: { type: 'string', description: 'User ID to monitor (optional - if not provided, monitors all users)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeCallVolume: { type: 'boolean', description: 'Include call volume metrics', default: true },
+      includeEmailActivity: { type: 'boolean', description: 'Include email activity metrics', default: true },
+      includeTimelineActivity: { type: 'boolean', description: 'Include timeline interactions', default: true },
+      includeResponseTimes: { type: 'boolean', description: 'Calculate response times', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const getUserPerformanceSummaryTool: Tool = {
+  name: 'bitrix24_get_user_performance_summary',
+  description: 'Get comprehensive performance summary for users including deal metrics and conversion rates',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userId: { type: 'string', description: 'User ID to analyze (optional - if not provided, analyzes all users)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeDealMetrics: { type: 'boolean', description: 'Include deal creation/conversion metrics', default: true },
+      includeActivityRatios: { type: 'boolean', description: 'Include activity type ratios', default: true },
+      includeConversionRates: { type: 'boolean', description: 'Calculate conversion rates', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const analyzeAccountPerformanceTool: Tool = {
+  name: 'bitrix24_analyze_account_performance',
+  description: 'Analyze performance and activities for specific accounts (companies/contacts)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      accountId: { type: 'string', description: 'Account ID (company or contact ID)' },
+      accountType: { type: 'string', enum: ['company', 'contact'], description: 'Type of account to analyze' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeAllInteractions: { type: 'boolean', description: 'Include all user interactions with this account', default: true },
+      includeDealProgression: { type: 'boolean', description: 'Include deal progression analysis', default: true },
+      includeTimelineHistory: { type: 'boolean', description: 'Include complete timeline history', default: true }
+    },
+    required: ['accountId', 'accountType', 'startDate']
+  }
+};
+
+export const compareUserPerformanceTool: Tool = {
+  name: 'bitrix24_compare_user_performance',
+  description: 'Compare performance metrics between multiple users',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userIds: { type: 'array', items: { type: 'string' }, description: 'Array of user IDs to compare (optional - if not provided, compares all users)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      metrics: { 
+        type: 'array', 
+        items: { type: 'string', enum: ['activities', 'deals', 'conversions', 'response_times', 'timeline_engagement'] },
+        description: 'Specific metrics to compare',
+        default: ['activities', 'deals', 'conversions']
+      },
+      includeRankings: { type: 'boolean', description: 'Include performance rankings', default: true },
+      includeTrends: { type: 'boolean', description: 'Include trend analysis', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const trackDealProgressionTool: Tool = {
+  name: 'bitrix24_track_deal_progression',
+  description: 'Track deal progression through pipeline stages with timing analysis',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      dealId: { type: 'string', description: 'Specific deal ID to track (optional - if not provided, tracks all deals)' },
+      userId: { type: 'string', description: 'User ID to filter deals (optional)' },
+      pipelineId: { type: 'string', description: 'Pipeline ID to filter deals (optional)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeStageDuration: { type: 'boolean', description: 'Calculate time spent in each stage', default: true },
+      identifyStalled: { type: 'boolean', description: 'Identify stalled deals', default: true },
+      calculateVelocity: { type: 'boolean', description: 'Calculate pipeline velocity', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const monitorSalesActivitiesTool: Tool = {
+  name: 'bitrix24_monitor_sales_activities',
+  description: 'Monitor sales-related activities including tasks, follow-ups, and meetings',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userId: { type: 'string', description: 'User ID to monitor (optional - if not provided, monitors all users)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeTaskCompletion: { type: 'boolean', description: 'Include task completion rates', default: true },
+      includeFollowUpTracking: { type: 'boolean', description: 'Include follow-up tracking', default: true },
+      includeMeetingTracking: { type: 'boolean', description: 'Include meeting tracking', default: true },
+      includeQuoteActivity: { type: 'boolean', description: 'Include quote/proposal activity', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const generateSalesReportTool: Tool = {
+  name: 'bitrix24_generate_sales_report',
+  description: 'Generate comprehensive sales report with customizable metrics and date ranges',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      reportType: { 
+        type: 'string', 
+        enum: ['user_performance', 'account_analysis', 'team_summary', 'pipeline_analysis', 'activity_report'],
+        description: 'Type of report to generate'
+      },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      userIds: { type: 'array', items: { type: 'string' }, description: 'Specific user IDs to include (optional)' },
+      includeMetrics: { 
+        type: 'array', 
+        items: { type: 'string', enum: ['revenue', 'conversion_rates', 'activity_volumes', 'response_times', 'deal_progression'] },
+        description: 'Specific metrics to include in report',
+        default: ['revenue', 'conversion_rates', 'activity_volumes']
+      },
+      includeTrendAnalysis: { type: 'boolean', description: 'Include trend analysis', default: true },
+      includeComparisons: { type: 'boolean', description: 'Include performance comparisons', default: true }
+    },
+    required: ['reportType', 'startDate']
+  }
+};
+
+export const getTeamDashboardTool: Tool = {
+  name: 'bitrix24_get_team_dashboard',
+  description: 'Get real-time team performance dashboard with key metrics and alerts',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      includeRealTimeMetrics: { type: 'boolean', description: 'Include real-time performance metrics', default: true },
+      includeTopPerformers: { type: 'boolean', description: 'Include top performers identification', default: true },
+      includeAttentionNeeded: { type: 'boolean', description: 'Include accounts/deals needing attention', default: true },
+      includeWorkloadDistribution: { type: 'boolean', description: 'Include workload distribution analysis', default: true },
+      timeframe: { 
+        type: 'string', 
+        enum: ['today', 'week', 'month', 'quarter'],
+        description: 'Timeframe for dashboard metrics',
+        default: 'today'
+      }
+    }
+  }
+};
+
+export const analyzeCustomerEngagementTool: Tool = {
+  name: 'bitrix24_analyze_customer_engagement',
+  description: 'Analyze customer engagement patterns and relationship health',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      accountId: { type: 'string', description: 'Account ID (company or contact ID) - optional' },
+      accountType: { type: 'string', enum: ['company', 'contact'], description: 'Type of account' },
+      userId: { type: 'string', description: 'User ID to filter analysis (optional)' },
+      startDate: { type: 'string', description: 'Start date in YYYY-MM-DD format' },
+      endDate: { type: 'string', description: 'End date in YYYY-MM-DD format (optional - defaults to today)' },
+      includeCommunicationPatterns: { type: 'boolean', description: 'Include communication pattern analysis', default: true },
+      includeResponseQuality: { type: 'boolean', description: 'Include response quality metrics', default: true },
+      includeEngagementScores: { type: 'boolean', description: 'Calculate engagement scores', default: true },
+      includeRelationshipHealth: { type: 'boolean', description: 'Assess relationship health', default: true }
+    },
+    required: ['startDate']
+  }
+};
+
+export const forecastPerformanceTool: Tool = {
+  name: 'bitrix24_forecast_performance',
+  description: 'Generate performance forecasts and predictive analytics',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      forecastType: { 
+        type: 'string', 
+        enum: ['pipeline_forecast', 'user_performance', 'revenue_prediction', 'goal_achievement'],
+        description: 'Type of forecast to generate'
+      },
+      userId: { type: 'string', description: 'User ID to forecast (optional - if not provided, forecasts for all users)' },
+      historicalPeriod: { 
+        type: 'string', 
+        enum: ['3_months', '6_months', '1_year'],
+        description: 'Historical period to use for forecasting',
+        default: '6_months'
+      },
+      forecastPeriod: { 
+        type: 'string', 
+        enum: ['1_month', '3_months', '6_months'],
+        description: 'Period to forecast into the future',
+        default: '1_month'
+      },
+      includePipelineAnalysis: { type: 'boolean', description: 'Include pipeline forecasting', default: true },
+      includeRiskAssessment: { type: 'boolean', description: 'Include risk assessment', default: true },
+      includeGoalTracking: { type: 'boolean', description: 'Include goal achievement tracking', default: true }
+    },
+    required: ['forecastType']
+  }
+};
+
+// User Management Tools
+export const getUserTool: Tool = {
+  name: 'bitrix24_get_user',
+  description: 'Get user information by ID',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userId: { type: 'string', description: 'User ID to retrieve' }
+    },
+    required: ['userId']
+  }
+};
+
+export const getAllUsersTool: Tool = {
+  name: 'bitrix24_get_all_users',
+  description: 'Get all users in the system with their names and details',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      includeInactive: { type: 'boolean', description: 'Include inactive users', default: false }
+    }
+  }
+};
+
+export const resolveUserNamesTool: Tool = {
+  name: 'bitrix24_resolve_user_names',
+  description: 'Resolve user IDs to user names',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      userIds: { 
+        type: 'array', 
+        items: { type: 'string' },
+        description: 'Array of user IDs to resolve to names' 
+      }
+    },
+    required: ['userIds']
+  }
+};
+
+export const getContactsWithUserNamesTool: Tool = {
+  name: 'bitrix24_get_contacts_with_user_names',
+  description: 'Get contacts with user names resolved (assigned, created, modified by)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of contacts to return', default: 20 },
+      filter: { type: 'object', description: 'Filter criteria' }
+    }
+  }
+};
+
+export const getDealsWithUserNamesTool: Tool = {
+  name: 'bitrix24_get_deals_with_user_names',
+  description: 'Get deals with user names resolved (assigned, created, modified by)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of deals to return', default: 20 },
+      filter: { type: 'object', description: 'Filter criteria' },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE', 'OPPORTUNITY'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    }
+  }
+};
+
+export const getLeadsWithUserNamesTool: Tool = {
+  name: 'bitrix24_get_leads_with_user_names',
+  description: 'Get leads with user names resolved (assigned, created, modified by)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of leads to return', default: 20 },
+      filter: { type: 'object', description: 'Filter criteria' },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    }
+  }
+};
+
+export const getCompaniesWithUserNamesTool: Tool = {
+  name: 'bitrix24_get_companies_with_user_names',
+  description: 'Get companies with user names resolved (assigned, created, modified by)',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      limit: { type: 'number', description: 'Maximum number of companies to return', default: 20 },
+      filter: { type: 'object', description: 'Filter criteria' },
+      orderBy: { 
+        type: 'string', 
+        enum: ['DATE_CREATE', 'DATE_MODIFY', 'ID', 'TITLE'],
+        description: 'Field to order by',
+        default: 'DATE_CREATE'
+      },
+      orderDirection: {
+        type: 'string',
+        enum: ['ASC', 'DESC'],
+        description: 'Order direction',
+        default: 'DESC'
+      }
+    }
+  }
+};
+
 // Export all tools
 export const allTools = [
   createContactTool,
@@ -611,7 +947,26 @@ export const allTools = [
   getDealStagesTool,
   filterDealsByPipelineTool,
   filterDealsByBudgetTool,
-  filterDealsByStatusTool
+  filterDealsByStatusTool,
+  // Sales Team Monitoring Tools
+  monitorUserActivitiesTool,
+  getUserPerformanceSummaryTool,
+  analyzeAccountPerformanceTool,
+  compareUserPerformanceTool,
+  trackDealProgressionTool,
+  monitorSalesActivitiesTool,
+  generateSalesReportTool,
+  getTeamDashboardTool,
+  analyzeCustomerEngagementTool,
+  forecastPerformanceTool,
+  // User Management Tools
+  getUserTool,
+  getAllUsersTool,
+  resolveUserNamesTool,
+  getContactsWithUserNamesTool,
+  getDealsWithUserNamesTool,
+  getLeadsWithUserNamesTool,
+  getCompaniesWithUserNamesTool
 ];
 
 // Tool execution handlers
@@ -917,6 +1272,244 @@ export async function executeToolCall(name: string, args: any): Promise<any> {
           count: statusDeals.length,
           message: statusMessage
         };
+
+      // Sales Team Monitoring Tools
+      case 'bitrix24_monitor_user_activities':
+        const userActivities = await bitrix24Client.monitorUserActivities(
+          args.userId,
+          args.startDate,
+          args.endDate,
+          {
+            includeCallVolume: args.includeCallVolume,
+            includeEmailActivity: args.includeEmailActivity,
+            includeTimelineActivity: args.includeTimelineActivity,
+            includeResponseTimes: args.includeResponseTimes
+          }
+        );
+        return { 
+          success: true, 
+          activities: userActivities,
+          message: `User activity monitoring completed for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_get_user_performance_summary':
+        const performanceSummary = await bitrix24Client.getUserPerformanceSummary(
+          args.userId,
+          args.startDate,
+          args.endDate,
+          {
+            includeDealMetrics: args.includeDealMetrics,
+            includeActivityRatios: args.includeActivityRatios,
+            includeConversionRates: args.includeConversionRates
+          }
+        );
+        return { 
+          success: true, 
+          performance: performanceSummary,
+          message: `Performance summary generated for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_analyze_account_performance':
+        const accountPerformance = await bitrix24Client.analyzeAccountPerformance(
+          args.accountId,
+          args.accountType,
+          args.startDate,
+          args.endDate,
+          {
+            includeAllInteractions: args.includeAllInteractions,
+            includeDealProgression: args.includeDealProgression,
+            includeTimelineHistory: args.includeTimelineHistory
+          }
+        );
+        return { 
+          success: true, 
+          accountAnalysis: accountPerformance,
+          message: `Account performance analysis completed for ${args.accountType} ${args.accountId}`
+        };
+
+      case 'bitrix24_compare_user_performance':
+        const userComparison = await bitrix24Client.compareUserPerformance(
+          args.userIds,
+          args.startDate,
+          args.endDate,
+          {
+            metrics: args.metrics,
+            includeRankings: args.includeRankings,
+            includeTrends: args.includeTrends
+          }
+        );
+        return { 
+          success: true, 
+          comparison: userComparison,
+          message: `User performance comparison completed for ${args.userIds?.length || 'all'} users`
+        };
+
+      case 'bitrix24_track_deal_progression':
+        const dealProgression = await bitrix24Client.trackDealProgression(
+          args.dealId,
+          args.userId,
+          args.pipelineId,
+          args.startDate,
+          args.endDate,
+          {
+            includeStageDuration: args.includeStageDuration,
+            identifyStalled: args.identifyStalled,
+            calculateVelocity: args.calculateVelocity
+          }
+        );
+        return { 
+          success: true, 
+          progression: dealProgression,
+          message: `Deal progression tracking completed for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_monitor_sales_activities':
+        const salesActivities = await bitrix24Client.monitorSalesActivities(
+          args.userId,
+          args.startDate,
+          args.endDate,
+          {
+            includeTaskCompletion: args.includeTaskCompletion,
+            includeFollowUpTracking: args.includeFollowUpTracking,
+            includeMeetingTracking: args.includeMeetingTracking,
+            includeQuoteActivity: args.includeQuoteActivity
+          }
+        );
+        return { 
+          success: true, 
+          salesActivities: salesActivities,
+          message: `Sales activities monitoring completed for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_generate_sales_report':
+        const salesReport = await bitrix24Client.generateSalesReport(
+          args.reportType,
+          args.startDate,
+          args.endDate,
+          {
+            userIds: args.userIds,
+            includeMetrics: args.includeMetrics,
+            includeTrendAnalysis: args.includeTrendAnalysis,
+            includeComparisons: args.includeComparisons
+          }
+        );
+        return { 
+          success: true, 
+          report: salesReport,
+          message: `${args.reportType} report generated for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_get_team_dashboard':
+        const teamDashboard = await bitrix24Client.getTeamDashboard({
+          includeRealTimeMetrics: args.includeRealTimeMetrics,
+          includeTopPerformers: args.includeTopPerformers,
+          includeAttentionNeeded: args.includeAttentionNeeded,
+          includeWorkloadDistribution: args.includeWorkloadDistribution,
+          timeframe: args.timeframe
+        });
+        return { 
+          success: true, 
+          dashboard: teamDashboard,
+          message: `Team dashboard generated for timeframe: ${args.timeframe || 'today'}`
+        };
+
+      case 'bitrix24_analyze_customer_engagement':
+        const customerEngagement = await bitrix24Client.analyzeCustomerEngagement(
+          args.accountId,
+          args.accountType,
+          args.userId,
+          args.startDate,
+          args.endDate,
+          {
+            includeCommunicationPatterns: args.includeCommunicationPatterns,
+            includeResponseQuality: args.includeResponseQuality,
+            includeEngagementScores: args.includeEngagementScores,
+            includeRelationshipHealth: args.includeRelationshipHealth
+          }
+        );
+        return { 
+          success: true, 
+          engagement: customerEngagement,
+          message: `Customer engagement analysis completed for period ${args.startDate} to ${args.endDate || 'today'}`
+        };
+
+      case 'bitrix24_forecast_performance':
+        const performanceForecast = await bitrix24Client.forecastPerformance(
+          args.forecastType,
+          args.userId,
+          {
+            historicalPeriod: args.historicalPeriod,
+            forecastPeriod: args.forecastPeriod,
+            includePipelineAnalysis: args.includePipelineAnalysis,
+            includeRiskAssessment: args.includeRiskAssessment,
+            includeGoalTracking: args.includeGoalTracking
+          }
+        );
+        return { 
+          success: true, 
+          forecast: performanceForecast,
+          message: `${args.forecastType} forecast generated using ${args.historicalPeriod || '6_months'} of historical data`
+        };
+
+      // User Management Tools
+      case 'bitrix24_get_user':
+        const userData = await bitrix24Client.getUser(args.userId);
+        return { success: true, user: userData };
+
+      case 'bitrix24_get_all_users':
+        const allUsers = await bitrix24Client.getAllUsers();
+        return { success: true, users: allUsers, message: `Found ${allUsers.length} users` };
+
+      case 'bitrix24_resolve_user_names':
+        const userNames = await bitrix24Client.resolveUserNames(args.userIds);
+        return { success: true, userNames, message: `Resolved ${Object.keys(userNames).length} user names` };
+
+      case 'bitrix24_get_contacts_with_user_names':
+        const contactsRaw = await bitrix24Client.listContacts({
+          start: 0,
+          filter: args.filter
+        });
+        const contactsWithNames = await bitrix24Client.enhanceWithUserNames(contactsRaw.slice(0, args.limit || 20));
+        return { success: true, contacts: contactsWithNames, message: `Retrieved ${contactsWithNames.length} contacts with user names resolved` };
+
+      case 'bitrix24_get_deals_with_user_names':
+        const dealOrderWithNames: Record<string, string> = {};
+        dealOrderWithNames[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
+        
+        const dealsRaw = await bitrix24Client.listDeals({
+          start: 0,
+          filter: args.filter,
+          order: dealOrderWithNames,
+          select: ['*']
+        });
+        const dealsWithNames = await bitrix24Client.enhanceWithUserNames(dealsRaw.slice(0, args.limit || 20));
+        return { success: true, deals: dealsWithNames, message: `Retrieved ${dealsWithNames.length} deals with user names resolved` };
+
+      case 'bitrix24_get_leads_with_user_names':
+        const leadOrderWithNames: Record<string, string> = {};
+        leadOrderWithNames[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
+        
+        const leadsRaw = await bitrix24Client.listLeads({
+          start: 0,
+          filter: args.filter,
+          order: leadOrderWithNames,
+          select: ['*']
+        });
+        const leadsWithNames = await bitrix24Client.enhanceWithUserNames(leadsRaw.slice(0, args.limit || 20));
+        return { success: true, leads: leadsWithNames, message: `Retrieved ${leadsWithNames.length} leads with user names resolved` };
+
+      case 'bitrix24_get_companies_with_user_names':
+        const companyOrderWithNames: Record<string, string> = {};
+        companyOrderWithNames[args.orderBy || 'DATE_CREATE'] = args.orderDirection || 'DESC';
+        
+        const companiesRaw = await bitrix24Client.listCompanies({
+          start: 0,
+          filter: args.filter,
+          order: companyOrderWithNames,
+          select: ['*']
+        });
+        const companiesWithNames = await bitrix24Client.enhanceWithUserNames(companiesRaw.slice(0, args.limit || 20));
+        return { success: true, companies: companiesWithNames, message: `Retrieved ${companiesWithNames.length} companies with user names resolved` };
 
       default:
         throw new Error(`Unknown tool: ${name}`);
