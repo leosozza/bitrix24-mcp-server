@@ -219,6 +219,19 @@ npm test
 npm start
 ```
 
+### Python MCP Server Example
+
+Uma implementação mínima em Python também está disponível para quem prefere esse ambiente. Para executá-la:
+
+```bash
+pip install -r requirements.txt
+python bitrix24_mcp.py
+```
+
+Certifique-se de definir as variáveis de ambiente `BITRIX24_TOKEN` e `BITRIX24_HOST` antes de executar.
+
+A ferramenta `bitrix24_contar_leads` aceita o parâmetro `scouter` como um ID numérico ou nome. Quando um nome é fornecido, o servidor resolve automaticamente para o ID do usuário usando o método `user.get` do Bitrix24.
+
 ### Adding New Tools
 
 1. Define the tool in `src/tools/index.ts`:
