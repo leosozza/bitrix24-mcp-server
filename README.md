@@ -10,6 +10,7 @@ A comprehensive Model Context Protocol (MCP) server for Bitrix24 CRM integration
 - **Type Safety**: Full TypeScript implementation with comprehensive type definitions
 - **Error Handling**: Robust error handling and validation
 - **Easy Integration**: Simple setup with Claude Desktop and other MCP-compatible clients
+- **🆕 Configuration UI**: Modern React frontend for easy Bitrix24 account configuration
 
 ## 📋 Available Tools
 
@@ -115,6 +116,28 @@ npm run build
 npm test
 ```
 
+### 🎨 Configuration UI (Frontend)
+
+A modern React-based configuration interface is available in the `/frontend` directory to help users easily configure their Bitrix24 integration.
+
+**Features:**
+- ✨ Intuitive form with all necessary fields
+- 🔍 Connection test with visual feedback
+- 💾 Save configuration functionality
+- 📱 Fully responsive design
+- 🎯 Ready for backend integration
+
+**Quick Start:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The configuration UI will be available at `http://localhost:3000`
+
+For detailed integration instructions, see [`frontend/INTEGRATION_GUIDE.md`](frontend/INTEGRATION_GUIDE.md).
+
 ## ⚙️ Configuration
 
 ### Environment Variables
@@ -193,6 +216,14 @@ bitrix24-mcp-server/
 │   ├── config/
 │   │   └── index.ts           # Configuration management
 │   └── index.ts               # Main MCP server
+├── frontend/                   # React configuration UI
+│   ├── src/
+│   │   ├── components/        # React components
+│   │   ├── types/             # TypeScript types
+│   │   └── styles/            # CSS styles
+│   ├── public/                # Static assets
+│   ├── package.json
+│   └── README.md              # Frontend documentation
 ├── test/
 │   └── integration.test.js    # Integration tests
 ├── build/                     # Compiled JavaScript
